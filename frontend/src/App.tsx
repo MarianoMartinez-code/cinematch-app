@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Search, 
@@ -8,8 +9,25 @@ import {
   Globe
 } from 'lucide-react';
 
+// --- Types ---
+interface Movie {
+  id: number;
+  title: string;
+  genre: string;
+  year: string;
+  img: string;
+}
+
+interface ProgressItem {
+  id: number;
+  title: string;
+  progress: number;
+  duration: string;
+  img: string;
+}
+
 // --- Simplified Movie Data ---
-const TRENDING_MOVIES = [
+const TRENDING_MOVIES: Movie[] = [
   { id: 1, title: 'Más allá del vacío', genre: 'Sci-Fi • Suspenso', year: '2024', img: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=400' },
   { id: 2, title: 'Vals de Sombras', genre: 'Noir • Misterio', year: '2024', img: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=400' },
   { id: 3, title: 'Etéreo', genre: 'Fantasía • Drama', year: '2023', img: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400' },
@@ -17,13 +35,13 @@ const TRENDING_MOVIES = [
   { id: 5, title: 'Horizonte de Neón', genre: 'Sci-Fi • Cyberpunk', year: '2024', img: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=400' },
 ];
 
-const MY_LIST = [
+const MY_LIST: ProgressItem[] = [
   { id: 1, title: 'Arquitectura del Silencio', progress: 65, duration: '24:12 / 45:00', img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=200' },
   { id: 2, title: 'Estallido Sónico', progress: 85, duration: '40:02 / 52:40', img: 'https://images.unsplash.com/photo-1514525253361-bee8718a74a2?q=80&w=200' },
   { id: 3, title: 'Alma de Datos', progress: 30, duration: '14:20 / 48:00', img: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=200' },
 ];
 
-const RECOMMENDED_MOVIES = [
+const RECOMMENDED_MOVIES: Movie[] = [
   { id: 6, title: 'Código Fractal', genre: 'Misterio • Sci-Fi', year: '2024', img: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=400' },
   { id: 7, title: 'Oasis Urbano', genre: 'Documental • Arte', year: '2023', img: 'https://images.unsplash.com/photo-1514539079130-25950c84af65?q=80&w=400' },
   { id: 8, title: 'Último Susurro', genre: 'Terror • Drama', year: '2024', img: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=400' },
@@ -54,13 +72,13 @@ const Navbar = () => (
   </nav>
 );
 
-const MovieCard = ({ title, genre, year, img }: any) => (
+const MovieCard = ({ title, genre, year, img, tick }: Movie & { tick: number }) => (
   <motion.div 
     whileHover={{ scale: 1.05 }}
     className="flex-shrink-0 w-64 group cursor-pointer"
   >
     <div className="relative aspect-[2/3] rounded-xl overflow-hidden mb-3 border border-white/10 group-hover:border-blue-500/50 transition-colors">
-      <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+      <img src={`${img}&v=${tick}`} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
     <h4 className="font-bold text-white mb-0.5">{title}</h4>
@@ -68,7 +86,7 @@ const MovieCard = ({ title, genre, year, img }: any) => (
   </motion.div>
 );
 
-const MovieRow = ({ title, movies }: any) => (
+const MovieRow = ({ title, movies, tick }: { title: string, movies: Movie[], tick: number }) => (
   <section className="px-12 py-8">
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-2">
@@ -78,15 +96,15 @@ const MovieRow = ({ title, movies }: any) => (
       <button className="text-xs text-gray-500 hover:text-white transition-colors">Ver todo</button>
     </div>
     <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
-      {movies.map((movie: any) => <MovieCard key={movie.id} {...movie} />)}
+      {movies.map((movie) => <MovieCard key={movie.id} {...movie} tick={tick} />)}
     </div>
   </section>
 );
 
-const ProgressCard = ({ title, progress, duration, img }: any) => (
+const ProgressCard = ({ title, progress, duration, img, tick }: ProgressItem & { tick: number }) => (
   <div className="flex-1 min-w-[300px] bg-white/5 border border-white/10 rounded-xl p-4 flex gap-4 hover:bg-white/10 transition-colors cursor-pointer">
     <div className="w-20 h-12 rounded-md overflow-hidden bg-gray-800 flex-shrink-0">
-      <img src={img} alt={title} className="w-full h-full object-cover" />
+      <img src={`${img}&v=${tick}`} alt={title} className="w-full h-full object-cover" />
     </div>
     <div className="flex-1">
       <h4 className="text-sm font-bold mb-2 truncate">{title}</h4>
@@ -99,6 +117,17 @@ const ProgressCard = ({ title, progress, duration, img }: any) => (
 );
 
 function App() {
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    // Temporizador invisible de 3 minutos para asegurar que las imágenes se refresquen y rendericen correctamente
+    const timer = setInterval(() => {
+      setTick(prev => prev + 1);
+    }, 180000); 
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background selection:bg-blue-500/30">
       <Navbar />
@@ -142,7 +171,7 @@ function App() {
       </section>
 
       {/* Trending Section */}
-      <MovieRow title="Tendencias Ahora" movies={TRENDING_MOVIES} />
+      <MovieRow title="Tendencias Ahora" movies={TRENDING_MOVIES} tick={tick} />
 
       {/* New Releases Section (Featured Layout) */}
       <section className="px-12 py-8">
@@ -190,13 +219,13 @@ function App() {
       </section>
 
       {/* Recommended Section */}
-      <MovieRow title="Recomendados" movies={RECOMMENDED_MOVIES} />
+      <MovieRow title="Recomendados" movies={RECOMMENDED_MOVIES} tick={tick} />
 
       {/* My List Section */}
       <section className="px-12 py-8 mb-20">
         <h2 className="text-xl font-bold mb-6">Mi Lista</h2>
         <div className="flex flex-wrap gap-6">
-          {MY_LIST.map(item => <ProgressCard key={item.id} {...item} />)}
+          {MY_LIST.map(item => <ProgressCard key={item.id} {...item} tick={tick} />)}
         </div>
       </section>
 
