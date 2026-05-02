@@ -21,28 +21,10 @@ interface Movie {
 
 
 // --- Simplified Movie Data ---
-const TRENDING_MOVIES: Movie[] = [
-  { id: 1, title: 'Más allá del vacío', genre: 'Sci-Fi • Suspenso', year: '2024', img: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=400', description: 'Un viaje épico a través de las fronteras de la realidad donde el tiempo se dobla y el espacio se desvanece.' },
-  { id: 2, title: 'Vals de Sombras', genre: 'Noir • Misterio', year: '2024', img: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=400', description: 'En las profundidades de una ciudad eterna, un detective privado persigue un fantasma que no quiere ser encontrado.' },
-  { id: 3, title: 'Etéreo', genre: 'Fantasía • Drama', year: '2023', img: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400', description: 'Una joven descubre que sus sueños tienen el poder de cambiar el mundo físico, pero a un precio devastador.' },
-  { id: 4, title: 'Reyes del Asfalto', genre: 'Acción • Deporte', year: '2024', img: 'https://images.unsplash.com/photo-1542362567-b05500288cd5?q=80&w=400', description: 'La competencia por la gloria nunca ha sido tan peligrosa como en las calles nocturnas de Tokio.' },
-  { id: 5, title: 'Horizonte de Neón', genre: 'Sci-Fi • Cyberpunk', year: '2024', img: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=400', description: 'En el año 2099, la tecnología es la nueva religión y la rebelión es el único pecado imperdonable.' },
-];
-
-
-const RECOMMENDED_MOVIES: Movie[] = [
-  { id: 6, title: 'Código Fractal', genre: 'Misterio • Sci-Fi', year: '2024', img: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=400', description: 'Un matemático descubre un patrón en el caos que predice el fin de la civilización.' },
-  { id: 7, title: 'Oasis Urbano', genre: 'Documental • Arte', year: '2023', img: 'https://images.unsplash.com/photo-1514539079130-25950c84af65?q=80&w=400', description: 'Naturaleza reclamando su espacio en las megaciudades.' },
-  { id: 8, title: 'Último Susurro', genre: 'Terror • Drama', year: '2024', img: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=400', description: 'El silencio es el único aliado contra una entidad invisible.' },
-  { id: 9, title: 'Velocidad de Escape', genre: 'Acción • Sci-Fi', year: '2024', img: 'https://images.unsplash.com/photo-1614728263952-84ea256f9479?q=80&w=400', description: 'Un piloto renegado debe cruzar el cinturón de asteroides.' },
-];
-
-const COMEDY_MOVIES: Movie[] = [
-  { id: 10, title: 'Puto el que lo lea', genre: 'Comedia', year: '2024', img: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=400', description: 'Aventuras literarias extremas.' },
-  { id: 11, title: '¿Cuántos son 3? Dímelos', genre: 'Comedia', year: '2024', img: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=400', description: 'Matemáticas y fiesta no se llevan bien.' },
-  { id: 12, title: 'Menos 2, dímelos', genre: 'Comedia', year: '2024', img: 'https://images.unsplash.com/photo-1585647347483-22b66260dfff?q=80&w=400', description: 'La secuela negativa.' },
-  { id: 13, title: 'Di 5', genre: 'Comedia', year: '2024', img: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?q=80&w=400', description: 'El reality de los números.' },
-];
+// Ahora se cargan desde la API
+const TRENDING_MOVIES: Movie[] = [];
+const RECOMMENDED_MOVIES: Movie[] = [];
+const COMEDY_MOVIES: Movie[] = [];
 
 // --- Components ---
 
@@ -136,6 +118,20 @@ function App() {
     image: 'https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp'
   });
 
+  // Estado para las películas de la API
+  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
+  const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
+  const [comedyMovies, setComedyMovies] = useState<Movie[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Mapeo de IDs de géneros de TMDB a nombres legibles
+  const GENRE_MAP: Record<number, string> = {
+    28: 'Acción', 12: 'Aventura', 16: 'Animación', 35: 'Comedia', 80: 'Crimen',
+    99: 'Documental', 18: 'Drama', 10751: 'Familia', 14: 'Fantasía', 36: 'Historia',
+    27: 'Terror', 10402: 'Música', 9648: 'Misterio', 10749: 'Romance', 878: 'Ciencia Ficción',
+    10770: 'Película de TV', 53: 'Suspenso', 10752: 'Guerra', 37: 'Western'
+  };
+
   const AVATARS = [
     'https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp', // Messi Pelado
     'https://i.imgflip.com/4/33i4r0.jpg', // Red Bird
@@ -147,6 +143,32 @@ function App() {
   // Estado para las interacciones con las películas
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [interactions, setInteractions] = useState<Record<number, { mylist: boolean, liked: boolean }>>({});
+
+  const fetchMovies = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:8000/movies/next/');
+      const data = await response.json();
+      
+      const mappedMovies: Movie[] = data.results.map((m: any) => ({
+        id: m.movie_id,
+        title: m.title,
+        genre: m.genre_ids.map((id: number) => GENRE_MAP[id] || 'Género').join(' • '),
+        year: m.release_date ? m.release_date.split('-')[0] : '2024',
+        img: m.poster_url,
+        description: m.overview || 'Sin descripción disponible.'
+      }));
+
+      // Distribuimos las películas en las secciones (simulación para este demo)
+      setTrendingMovies(mappedMovies.slice(0, 5));
+      setRecommendedMovies(mappedMovies.slice(5, 10));
+      setComedyMovies(mappedMovies.slice(10, 15));
+    } catch (error) {
+      console.error("Error fetching movies:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleInteraction = (movieId: number, type: 'mylist' | 'liked') => {
     setInteractions(prev => {
@@ -160,6 +182,10 @@ function App() {
       };
     });
   };
+
+  useEffect(() => {
+    fetchMovies();
+  }, []);
 
   useEffect(() => {
     // Temporizador invisible de 3 minutos para asegurar que las imágenes se refresquen y rendericen correctamente
@@ -178,11 +204,11 @@ function App() {
     return <CharacterSelection onComplete={handleOnboardingComplete} />;
   }
 
-  const filteredTrending = TRENDING_MOVIES.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredRecommended = RECOMMENDED_MOVIES.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredComedy = COMEDY_MOVIES.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredTrending = trendingMovies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredRecommended = recommendedMovies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredComedy = comedyMovies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const allMovies = [...TRENDING_MOVIES, ...RECOMMENDED_MOVIES, ...COMEDY_MOVIES];
+  const allMovies = [...trendingMovies, ...recommendedMovies, ...comedyMovies];
   const likedMovies = allMovies.filter(m => interactions[m.id]?.liked);
   const myListMovies = allMovies.filter(m => interactions[m.id]?.mylist);
 
