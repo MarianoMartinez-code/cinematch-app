@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from movies.views import get_next_movies
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/movies/next/', get_next_movies, name='get-next-movies'),
 ]

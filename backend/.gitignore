@@ -1,5 +1,29 @@
+# Secretos y Configuración Local
 .env
+
+# Entornos Virtuales
 venv/
+env/
+ENV/
+
+# Python (Archivos temporales)
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Base de Datos Local (Persona B tendrá la suya propia o usará Supabase)
 db.sqlite3
+
+# IDEs (VS Code y otros)
+.vscode/
+.idea/
+*.swp
+
+# Sistema Operativo (Archivos ocultos molestos)
+.DS_Store
+Thumbs.db
+
+# Carpeta de medios (si llegas a subir imágenes localmente en el futuro)
+media/
