@@ -27,3 +27,7 @@ Thumbs.db
 
 # Carpeta de medios (si llegas a subir imágenes localmente en el futuro)
 media/
+
+# Compiled Python files
+__pycache__/
+*.py[cod]

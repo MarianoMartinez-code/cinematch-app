@@ -16,6 +16,7 @@ class TMDBService:
         """
         Consulta películas a TMDB. 
         Si genre_ids tiene datos (ej: [28, 12]), filtrará por esos géneros.
+        Retorna una lista de películas limpia para el Frontend.
         """
         params = {
             "include_adult": "false",
@@ -30,6 +31,23 @@ class TMDBService:
 
         with httpx.Client() as client:
             response = client.get(f"{self.base_url}/discover/movie", params=params, headers=self.headers)
+            
             if response.status_code == 200:
-                return response.json().get('results', [])
+                raw_results = response.json().get('results', [])
+                clean_movies = []
+                for movie in raw_results:
+                    if movie.get('poster_path'):
+                        clean_movies.append({
+                            "movie_id": movie.get("id"),
+                            "title": movie.get("title"),
+                            "overview": movie.get("overview"),
+                            # URL completa para el gradiente dinámico y visualización
+                            "poster_url": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}",
+                            # Lista de IDs necesaria para el endpoint /swipe/
+                            "genre_ids": movie.get("genre_ids"), 
+                            "release_date": movie.get("release_date"),
+                            "vote_average": movie.get("vote_average"),
+                        })
+                return clean_movies
+                
             return []
