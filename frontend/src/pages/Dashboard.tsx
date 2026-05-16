@@ -8,6 +8,7 @@ import {
   Globe
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 // --- Types ---
 interface Movie {
@@ -23,42 +24,24 @@ interface Movie {
 
 // --- Simplified Movie Data ---
 // Ahora se cargan desde la API
-const TRENDING_MOVIES: Movie[] = [];
-const RECOMMENDED_MOVIES: Movie[] = [];
-const COMEDY_MOVIES: Movie[] = [];
 
 // --- Components ---
 
-const Navbar = ({ character, searchQuery, setSearchQuery, onProfileClick }: { character: any, searchQuery: string, setSearchQuery: (val: string) => void, onProfileClick: () => void }) => (
-  <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-4 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
+const Navbar = ({ character, onProfileClick, onSwiperClick }: { character: any, onProfileClick: () => void, onSwiperClick: () => void }) => (
+  <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-4 bg-linear-to-b from-black/80 to-transparent backdrop-blur-sm">
     <div className="flex items-center gap-12">
-      <h1 className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400 cursor-pointer" onClick={() => window.location.reload()}>CineMatch</h1>
+      <h1 className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-cyan-400 cursor-pointer" onClick={() => window.location.reload()}>CineMatch</h1>
       <ul className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
-        <li className="text-white relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-blue-500 cursor-pointer">Inicio</li>
-        <li className="hover:text-white transition-colors cursor-pointer">Series</li>
-        <li className="hover:text-white transition-colors cursor-pointer">Películas</li>
-        <li className="hover:text-white transition-colors cursor-pointer">Lo más nuevo</li>
-        <li onClick={onProfileClick} className="hover:text-white transition-colors cursor-pointer">Mi perfil</li>
-        <li onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }} className="hover:text-red-400 text-red-500 transition-colors cursor-pointer font-bold">Cerrar sesión</li>
+        <li className="text-white relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-blue-500 cursor-pointer" onClick={() => window.location.reload()}>Inicio</li>
+        <li className="hover:text-white transition-colors cursor-pointer" onClick={onSwiperClick}>Swiper</li>
       </ul>
     </div>
     <div className="flex items-center gap-6">
-      <div className="relative group flex items-center">
-        <Search className="absolute left-3 w-4 h-4 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
-        <input 
-          type="text"
-          placeholder="Buscar películas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-1.5 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all w-40 focus:w-64"
-        />
-      </div>
-      <Bell className="w-5 h-5 text-gray-400 cursor-pointer hover:text-white transition-colors" />
       <div 
+        className="w-10 h-10 rounded-full overflow-hidden border border-white/20 hover:border-blue-500 transition-colors cursor-pointer shadow-lg"
         onClick={onProfileClick}
-        className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-cyan-500 flex items-center justify-center overflow-hidden cursor-pointer border-2 border-white/20 hover:scale-110 transition-transform shadow-lg shadow-blue-500/20"
       >
-        <img src={character.image} alt="User" className="w-full h-full object-cover object-center" />
+        <img src={character?.image || "https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp"} alt="Profile" className="w-full h-full object-cover" />
       </div>
     </div>
   </nav>
@@ -74,7 +57,7 @@ const MovieCard = ({ title, genre, year, img, tick, onClick }: Movie & { tick: n
       <img src={`${img}&v=${tick}`} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
       
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
         <span className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold border border-white/30 transform translate-y-4 group-hover:translate-y-0 transition-transform">
           Más de cerca
         </span>
@@ -110,7 +93,6 @@ const MovieRow = ({ title, movies, tick, onMovieClick }: { title: string, movies
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
   
   // Estado de Perfil
   const [showProfile, setShowProfile] = useState(false);
@@ -122,8 +104,9 @@ function Dashboard() {
   // Estado para las películas de la API
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
-  const [comedyMovies, setComedyMovies] = useState<Movie[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [dynamicGenreMovies, setDynamicGenreMovies] = useState<Movie[]>([]);
+  const [dynamicGenreTitle, setDynamicGenreTitle] = useState('Comedia');
+  const [heroMovie, setHeroMovie] = useState<Movie | null>(null);
   const [profileLikedMovies, setProfileLikedMovies] = useState<Movie[]>([]);
   const [profileWatchlistMovies, setProfileWatchlistMovies] = useState<Movie[]>([]);
 
@@ -149,7 +132,6 @@ function Dashboard() {
 
   const fetchMovies = async () => {
     try {
-      setIsLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
@@ -162,6 +144,21 @@ function Dashboard() {
         img: m.poster_url,
         description: m.overview || 'Sin descripción disponible.'
       });
+
+      let chosenGenreId: number | null = null;
+      let chosenGenreTitle = 'Comedia';
+
+      const savedOnboardingGenres = localStorage.getItem('onboardingGenres');
+      if (savedOnboardingGenres) {
+          try {
+              const parsedGenres = JSON.parse(savedOnboardingGenres);
+              if (Array.isArray(parsedGenres) && parsedGenres.length > 0) {
+                  const randGenre = parsedGenres[Math.floor(Math.random() * parsedGenres.length)];
+                  chosenGenreId = randGenre;
+                  chosenGenreTitle = GENRE_MAP[randGenre] || 'Recomendados';
+              }
+          } catch (e) { console.error(e); }
+      }
 
       // Obtenemos el perfil para recuperar la lista de películas guardadas
       try {
@@ -190,7 +187,8 @@ function Dashboard() {
               const res = await fetch(`http://localhost:8000/api/movies/details/?ids=${likedIds.join(',')}`, { headers: { 'Authorization': `Bearer ${token}` } });
               if (res.ok) {
                   const details = await res.json();
-                  setProfileLikedMovies(details.results.map(mapMovie));
+                  const likedMapped = details.results.map(mapMovie);
+                  setProfileLikedMovies(likedMapped);
               }
           }
           if (watchlistIds.length > 0) {
@@ -215,11 +213,27 @@ function Dashboard() {
       // Distribuimos las películas en las secciones (simulación para este demo)
       setTrendingMovies(mappedMovies.slice(0, 5));
       setRecommendedMovies(mappedMovies.slice(5, 10));
-      setComedyMovies(mappedMovies.slice(10, 15));
+
+      let dynamicMovies = mappedMovies;
+      if (chosenGenreId) {
+          dynamicMovies = mappedMovies.filter(m => m.genreIds.includes(chosenGenreId!));
+      } else {
+          dynamicMovies = mappedMovies.filter(m => m.genreIds.includes(35)); // Fallback a Comedia
+      }
+      
+      if (dynamicMovies.length === 0) {
+          dynamicMovies = mappedMovies.slice(10, 15);
+      }
+
+      setDynamicGenreTitle(chosenGenreTitle);
+      setDynamicGenreMovies(dynamicMovies.slice(0, 5));
+      if (dynamicMovies.length > 0) {
+          setHeroMovie(dynamicMovies[Math.floor(Math.random() * dynamicMovies.length)]);
+      } else if (mappedMovies.length > 0) {
+          setHeroMovie(mappedMovies[Math.floor(Math.random() * mappedMovies.length)]);
+      }
     } catch (error) {
       console.error("Error fetching movies:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -296,66 +310,77 @@ function Dashboard() {
   }, []);
 
   // Removido showHome logic
-  const filteredTrending = trendingMovies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredRecommended = recommendedMovies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredComedy = comedyMovies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const allMovies = [...trendingMovies, ...recommendedMovies, ...dynamicGenreMovies];
 
-  const allMovies = [...trendingMovies, ...recommendedMovies, ...comedyMovies];
-  const likedMovies = allMovies.filter(m => interactions[m.id]?.liked);
-  const myListMovies = allMovies.filter(m => interactions[m.id]?.mylist);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background selection:bg-blue-500/30">
       <Navbar 
-        character={userProfile} 
-        searchQuery={searchQuery} 
-        setSearchQuery={setSearchQuery} 
-        onProfileClick={() => setShowProfile(true)} 
+        character={userProfile}
+        onProfileClick={() => setShowProfile(true)}
+        onSwiperClick={() => navigate('/onboarding')}
       />
 
       {/* Hero Section */}
-      <section className="relative h-[90vh] flex items-end px-12 pb-24 overflow-hidden">
-        {/* Hero Background */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1614728263952-84ea256f9479?q=80&w=2000"
-            className="w-full h-full object-cover object-top opacity-60 ml-20"
-            alt="Hero"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
-        </div>
+      {heroMovie ? (
+        <section className="relative h-[90vh] flex items-end px-12 pb-24 overflow-hidden">
+          {/* Hero Background */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={heroMovie.img || "https://images.unsplash.com/photo-1614728263952-84ea256f9479?q=80&w=2000"}
+              className="w-full h-full object-cover object-top opacity-60 ml-20"
+              alt="Hero"
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-background via-background/40 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-r from-background via-transparent to-transparent" />
+          </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> EN VIVO
-            </span>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Serie Original</span>
+          {/* Hero Content */}
+          <div className="relative z-10 max-w-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> EN VIVO
+              </span>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">{dynamicGenreTitle || 'Película Destacada'}</span>
+            </div>
+            <h1 className="text-6xl md:text-8xl font-black mb-6 leading-none tracking-tighter uppercase line-clamp-2">
+              {heroMovie.title}
+            </h1>
+            <p className="text-gray-400 text-lg mb-8 leading-relaxed line-clamp-3">
+              {heroMovie.description}
+            </p>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setSelectedMovie(heroMovie)}
+                className="flex items-center gap-2 px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg backdrop-blur-md transition-colors border border-white/10"
+              >
+                <Info className="w-5 h-5" /> Más información
+              </button>
+            </div>
           </div>
-          <h1 className="text-8xl font-black mb-6 leading-none tracking-tighter">
-            NEON<br />HORIZON
-          </h1>
-          <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-            En un mundo donde los recuerdos se pueden canjear como moneda, un corredor callejero descubre un secreto que podría colapsar el más allá digital.
-          </p>
-          <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors">
-              <Play className="w-5 h-5 fill-current" /> Tendencias Hoy
-            </button>
-            <button className="flex items-center gap-2 px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg backdrop-blur-md transition-colors border border-white/10">
-              <Info className="w-5 h-5" /> Más información
-            </button>
+        </section>
+      ) : (
+        <section className="relative h-[90vh] flex items-end px-12 pb-24 overflow-hidden bg-gray-900/40">
+          <div className="absolute inset-0 bg-linear-to-t from-background via-background/40 to-transparent" />
+          <div className="relative z-10 max-w-2xl animate-pulse w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-20 h-6 bg-gray-800 rounded-full" />
+              <div className="w-32 h-4 bg-gray-800 rounded-full" />
+            </div>
+            <div className="w-full h-24 bg-gray-800 rounded-xl mb-6" />
+            <div className="w-3/4 h-6 bg-gray-800 rounded-full mb-3" />
+            <div className="w-2/3 h-6 bg-gray-800 rounded-full mb-8" />
+            <div className="w-48 h-12 bg-gray-800 rounded-lg" />
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Trending Section */}
-      {filteredTrending.length > 0 && (
+      {trendingMovies.length > 0 && (
         <MovieRow 
           title="Tendencias Ahora" 
-          movies={filteredTrending} 
+          movies={trendingMovies} 
           tick={tick} 
           onMovieClick={setSelectedMovie}
         />
@@ -365,20 +390,20 @@ function Dashboard() {
       {/* ... (sin cambios aquí) ... */}
 
       {/* Recommended Section */}
-      {filteredRecommended.length > 0 && (
+      {recommendedMovies.length > 0 && (
         <MovieRow 
           title="Recomendados" 
-          movies={filteredRecommended} 
+          movies={recommendedMovies} 
           tick={tick} 
           onMovieClick={setSelectedMovie}
         />
       )}
 
-      {/* Comedy Section */}
-      {filteredComedy.length > 0 && (
+      {/* Dynamic Genre Section */}
+      {dynamicGenreMovies.length > 0 && (
         <MovieRow 
-          title="Comedia" 
-          movies={filteredComedy} 
+          title={dynamicGenreTitle} 
+          movies={dynamicGenreMovies} 
           tick={tick} 
           onMovieClick={setSelectedMovie}
         />
@@ -411,7 +436,7 @@ function Dashboard() {
                     <img src={userProfile.image} alt="Profile" className="w-full h-full object-cover object-center" />
                   </div>
                   <h3 className="text-xl font-bold mb-6 text-gray-400">Cambiar Avatar</h3>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-4 mb-12">
                     {AVATARS.map((url, i) => (
                       <motion.button
                         key={i}
@@ -424,6 +449,12 @@ function Dashboard() {
                       </motion.button>
                     ))}
                   </div>
+                  <button 
+                    onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }} 
+                    className="w-full py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-2xl transition-all border border-red-500/20 hover:border-red-500/40 uppercase tracking-widest text-xs"
+                  >
+                    Cerrar sesión
+                  </button>
                 </div>
 
                 {/* Gustos Section */}
@@ -499,19 +530,21 @@ function Dashboard() {
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
               className="relative w-full max-w-5xl bg-zinc-900 rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row shadow-2xl border border-white/5"
             >
-              {/* Imagen y Close */}
+              {/* Botón de Cerrar (ahora en la derecha) */}
+              <button 
+                onClick={() => setSelectedMovie(null)}
+                className="absolute top-6 right-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all border border-white/10 z-50"
+              >
+                ✕
+              </button>
+
+              {/* Imagen */}
               <div className="relative w-full md:w-5/12 aspect-[2/3] md:aspect-auto">
                 <img src={selectedMovie.img} className="w-full h-full object-cover" alt={selectedMovie.title} />
-                <button 
-                  onClick={() => setSelectedMovie(null)}
-                  className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all border border-white/10"
-                >
-                  ✕
-                </button>
               </div>
 
               {/* Contenido */}
-              <div className="p-8 md:p-16 flex-1 flex flex-col justify-center bg-gradient-to-br from-zinc-900 to-black">
+              <div className="p-8 md:p-16 flex-1 flex flex-col justify-center bg-linear-to-br from-zinc-900 to-black">
                 <div className="flex items-center gap-2 mb-6">
                   <div className="h-px w-8 bg-blue-500" />
                   <span className="text-blue-500 text-[10px] font-black uppercase tracking-[0.4em]">Detalles de película</span>
@@ -564,55 +597,15 @@ function Dashboard() {
         )}
       </AnimatePresence>
 
-      {filteredTrending.length === 0 && filteredRecommended.length === 0 && filteredComedy.length === 0 && searchQuery && (
-        <div className="px-12 py-20 text-center">
-          <h3 className="text-2xl font-bold text-gray-500">No se encontraron resultados para "{searchQuery}"</h3>
-          <p className="text-gray-600 mt-2">Intenta con otros términos o géneros.</p>
-        </div>
-      )}
-
-
       {/* Footer */}
-      <footer className="px-12 py-20 bg-black/40 border-t border-white/5">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
-          <div>
-            <h1 className="text-xl font-black tracking-tighter text-blue-500 mb-6 uppercase">CineMatch</h1>
-            <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
-              La experiencia cinematográfica definitiva, redefinida para la era moderna. Fotograma a fotograma, entregamos excelencia.
-            </p>
-          </div>
-          <div>
-            <h5 className="font-bold mb-6 text-sm">Explorar</h5>
-            <ul className="flex flex-col gap-4 text-sm text-gray-500">
-              <li className="hover:text-white transition-colors cursor-pointer">Originales</li>
-              <li className="hover:text-white transition-colors cursor-pointer">Películas</li>
-              <li className="hover:text-white transition-colors cursor-pointer">Series</li>
-              <li className="hover:text-white transition-colors cursor-pointer">TV en Vivo</li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-bold mb-6 text-sm">Ayuda</h5>
-            <ul className="flex flex-col gap-4 text-sm text-gray-500">
-              <li className="hover:text-white transition-colors cursor-pointer">Cuenta</li>
-              <li className="hover:text-white transition-colors cursor-pointer">Centro de Soporte</li>
-              <li className="hover:text-white transition-colors cursor-pointer">Política de Privacidad</li>
-              <li className="hover:text-white transition-colors cursor-pointer">Pref. de Cookies</li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-bold mb-6 text-sm">Social</h5>
-            <div className="flex gap-4">
-              <div className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors cursor-pointer">
-                <Globe className="w-4 h-4 text-gray-400" />
-              </div>
-              <div className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors cursor-pointer">
-                <Globe className="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-          </div>
+      <footer className="px-12 py-12 bg-black/40 border-t border-white/5 flex flex-col items-center justify-center gap-6">
+        <div className="text-center text-sm text-gray-500 tracking-[0.2em] uppercase">
+          Fundadores: <span className="text-white font-bold">Josue Guarimata F.</span> y <span className="text-white font-bold">Mariano</span>
         </div>
-        <div className="text-center text-[10px] text-gray-700 font-bold tracking-[0.3em] uppercase">
-          © 2024 CINEMATCH PREMIUM STREAMING PLATFORM. TODOS LOS DERECHOS RESERVADOS.
+        <div className="text-center text-xs text-gray-600 italic max-w-lg">
+          "Quicumque hoc legit, stultus est."
+          <br />
+          <span className="font-bold text-gray-500 mt-2 block">— jimmy neutron 7600a.c</span>
         </div>
       </footer>
 

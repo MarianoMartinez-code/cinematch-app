@@ -8,6 +8,7 @@ interface Movie {
   movie_id: number;
   title: string;
   poster_url: string;
+  genre_ids?: number[];
 }
 
 interface OnboardingProps {
@@ -18,6 +19,7 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
   const navigate = useNavigate();
   const [items, setItems] = useState<Movie[]>([]);
   const [likes, setLikes] = useState<number[]>([]);
+  const [likedGenres, setLikedGenres] = useState<number[]>([]);
   const [finished, setFinished] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [lastDirection, setLastDirection] = useState<'left' | 'right' | null>(null);
@@ -52,6 +54,9 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
     setTimeout(() => {
       if (direction === 'left') {
         setLikes(prev => [...prev, swipedItem.movie_id]);
+        if (swipedItem.genre_ids) {
+            setLikedGenres(prev => [...prev, ...swipedItem.genre_ids!]);
+        }
       }
 
       setItems(prev => {
@@ -110,6 +115,8 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
               console.error(e);
             }
             if (onComplete) onComplete(likes);
+            localStorage.setItem('onboardingGenres', JSON.stringify(likedGenres));
+            localStorage.removeItem('isNewUser');
             navigate('/home');
           }} className="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-blue-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-xl">
             ENTRAR A CINEMATCH

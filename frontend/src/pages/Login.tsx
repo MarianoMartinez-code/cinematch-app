@@ -30,8 +30,8 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        // After signup, we go to onboarding
-        navigate('/onboarding');
+        // After signup, we go to home, onboarding is now optional
+        navigate('/home');
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -48,11 +48,11 @@ export default function Login() {
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1614728263952-84ea256f9479?q=80&w=2000"
-          className="w-full h-full object-cover opacity-30"
+          src={isLogin ? "/images/auth_login.png" : "/images/auth_create.png"}
+          className="w-full h-full object-cover opacity-30 transition-all duration-1000"
           alt="Background"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black via-black/80 to-transparent" />
       </div>
 
       <motion.div 
@@ -60,7 +60,7 @@ export default function Login() {
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 w-full max-w-md bg-zinc-900/80 backdrop-blur-xl p-8 rounded-3xl border border-white/10"
       >
-        <h1 className="text-4xl font-black text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400 mb-8">
+        <h1 className="text-4xl font-black text-center text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-cyan-400 mb-8">
           CineMatch
         </h1>
 
