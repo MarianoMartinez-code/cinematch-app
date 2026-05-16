@@ -5,32 +5,74 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 
 
-def get_next_movies(request):
-    # 1. Obtenemos el user_id que el Middleware extrajo del token JWT
-    user_id = getattr(request, 'user_id', None)
+def get_onboarding_movies(request):
+    tmdb = TMDBService()
+    movies = tmdb.get_popular_movies()
+    return JsonResponse({"results": movies})
+
+def get_movies_details(request):
+    ids_str = request.GET.get('ids', '')
+    if not ids_str:
+        return JsonResponse({"results": []})
+        
+    ids = ids_str.split(',')
+    tmdb = TMDBService()
+    movies = []
     
-    top_genres = []
+    for m_id in ids:
+        m_id = m_id.strip()
+        if m_id:
+            movie = tmdb.get_movie(m_id)
+            if movie:
+                movies.append(movie)
+                
+    return JsonResponse({"results": movies})
+
+def get_next_movies(request):
+    user_id = getattr(request, 'user_id', None)
+    movies = []
     
     if user_id:
         try:
-            # 2. Buscamos el perfil en tu tabla de Supabase
             profile = UserProfile.objects.get(id=user_id)
-            scores = profile.genre_scores 
+            liked_movies = profile.liked_movies
+            watchlist = profile.watchlist
             
-            # 3. Filtramos los 3 géneros con mejor puntuación positiva
-            positive_scores = {k: v for k, v in scores.items() if v > 0}
-            top_genres = sorted(positive_scores, key=positive_scores.get, reverse=True)[:3]
+            tmdb = TMDBService()
+            
+            if liked_movies:
+                # Tomar las últimas 2 películas gustadas para recomendaciones variadas
+                recent_likes = liked_movies[-2:]
+                
+                for m_id in recent_likes:
+                    recs = tmdb.get_movie_recommendations(m_id)
+                    movies.extend(recs)
+                
+                # Eliminar duplicados si hay cruce de recomendaciones
+                seen = set()
+                unique_movies = []
+                for m in movies:
+                    if m['movie_id'] not in seen:
+                        seen.add(m['movie_id'])
+                        unique_movies.append(m)
+                
+                # Excluir las que el usuario ya le dio like o están en su watchlist
+                movies = [m for m in unique_movies if m['movie_id'] not in liked_movies and m['movie_id'] not in watchlist]
+                
+            # Si aún no hay películas (o no le ha dado like a nada), damos populares
+            if not movies:
+                movies = tmdb.get_popular_movies()
+                
         except UserProfile.DoesNotExist:
-            pass
+            movies = TMDBService().get_popular_movies()
+    else:
+        movies = TMDBService().get_popular_movies()
 
-    # 4. Usamos el servicio para traer las películas
-    tmdb = TMDBService()
-    movies = tmdb.get_movies_by_genres(genre_ids=top_genres)
-
-    return JsonResponse({"results": movies})
+    # Devolvemos un máximo de 20 películas
+    return JsonResponse({"results": movies[:20]})
 
 
-@csrf_exempt # Solo si no estás usando DRF; si usas APIView no es necesario
+@csrf_exempt
 def handle_movie_swipe(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -43,26 +85,27 @@ def handle_movie_swipe(request):
         if not user_id:
             return JsonResponse({"error": "No autorizado"}, status=401)
 
-        # 1. Obtener o crear el perfil (usando 'id' como en tu get_next_movies)
         profile, created = UserProfile.objects.get_or_create(id=user_id)
         
-        # 2. Lógica de pesos (+1 / -0.5)
+        # 1. Guardar la película en liked_movies
+        if direction == 'like':
+            liked_list = profile.liked_movies or []
+            if movie_id not in liked_list:
+                liked_list.append(movie_id)
+                profile.liked_movies = liked_list
+        
+        # 2. Lógica de pesos para analítica opcional
         scores = profile.genre_scores or {}
         adjustment = 1.0 if direction == 'like' else -0.5
 
         for g_id in genre_ids:
             g_id_str = str(g_id)
             current_val = scores.get(g_id_str, 0.0)
-            # Actualizamos y aseguramos que no sea negativo
             scores[g_id_str] = max(0.0, current_val + adjustment)
 
-        # 3. Guardar cambios
         profile.genre_scores = scores
         profile.save()
 
-        return JsonResponse({
-            "status": "success",
-            "new_scores": scores
-        })
+        return JsonResponse({"status": "success"})
 
     return JsonResponse({"error": "Método no permitido"}, status=405)

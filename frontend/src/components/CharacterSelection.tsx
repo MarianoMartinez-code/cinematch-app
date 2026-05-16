@@ -1,47 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import CharacterCard from './CharacterCard/CharacterCard';
 
-interface Taste {
-  id: number;
-  label: string;
-  image: string;
+interface Movie {
+  movie_id: number;
+  title: string;
+  poster_url: string;
 }
 
 interface OnboardingProps {
-  onComplete: (likes: string[]) => void;
+  onComplete?: (likes: number[]) => void;
 }
 
-const TASTES_DATA: Taste[] = [
-  { id: 1, label: 'Ciencia Ficción', image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=400' },
-  { id: 2, label: 'Terror', image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=400' },
-  { id: 3, label: 'Acción', image: 'https://images.unsplash.com/photo-1542362567-b05500288cd5?q=80&w=400' },
-  { id: 4, label: 'Fantasía', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400' },
-  { id: 5, label: 'Misterio', image: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=400' },
-];
-
 const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
-  const [items, setItems] = useState(TASTES_DATA);
-  const [likes, setLikes] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const [items, setItems] = useState<Movie[]>([]);
+  const [likes, setLikes] = useState<number[]>([]);
   const [finished, setFinished] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [lastDirection, setLastDirection] = useState<'left' | 'right' | null>(null);
 
-  // Lógica de Swipe: 
-  // Izquierda (A) = ME GUSTA
-  // Derecha (D) = PASAR
+  useEffect(() => {
+    const fetchOnboardingMovies = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('http://localhost:8000/api/movies/onboarding/', {
+           headers: { 'Authorization': `Bearer ${session?.access_token}` }
+        });
+        if (res.ok) {
+           const data = await res.json();
+           // Invertimos el array porque el SwipeCard saca el último elemento (el de más arriba visualmente)
+           setItems((data.results || []).slice(0, 10).reverse()); 
+        }
+      } catch (e) {
+        console.error("Error fetching onboarding movies", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchOnboardingMovies();
+  }, []);
+
   const handleSwipe = (id: number, direction: 'left' | 'right') => {
-    const swipedItem = items.find(i => i.id === id);
+    const swipedItem = items.find(i => i.movie_id === id);
     if (!swipedItem) return;
 
     setLastDirection(direction);
 
     setTimeout(() => {
       if (direction === 'left') {
-        setLikes(prev => [...prev, swipedItem.label]);
+        setLikes(prev => [...prev, swipedItem.movie_id]);
       }
 
       setItems(prev => {
-        const newItems = prev.filter(i => i.id !== id);
+        const newItems = prev.filter(i => i.movie_id !== id);
         if (newItems.length === 0) {
           setFinished(true);
         }
@@ -52,7 +66,7 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   const handleAction = (direction: 'left' | 'right') => {
     if (items.length > 0 && !finished) {
-        handleSwipe(items[items.length - 1].id, direction);
+        handleSwipe(items[items.length - 1].movie_id, direction);
     }
   };
 
@@ -79,8 +93,25 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
             </svg>
           </div>
           <h2 className="text-4xl font-black mb-4 tracking-tighter uppercase">¡Perfil Configurado!</h2>
-          <p className="text-gray-500 mb-12 italic text-sm">Has seleccionado {likes.length} géneros favoritos.</p>
-          <button onClick={() => onComplete(likes)} className="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-blue-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-xl">
+          <p className="text-gray-500 mb-12 italic text-sm">Has dado Me Gusta a {likes.length} películas.</p>
+          <button onClick={async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            try {
+              await fetch('http://localhost:8000/api/users/init-profile/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ movie_ids: likes })
+              });
+            } catch (e) {
+              console.error(e);
+            }
+            if (onComplete) onComplete(likes);
+            navigate('/home');
+          }} className="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-blue-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-xl">
             ENTRAR A CINEMATCH
           </button>
         </motion.div>
@@ -93,23 +124,27 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none" />
       
       <div className="relative z-10 text-center mb-12">
-        <h1 className="text-4xl font-black tracking-tighter mb-2 text-white uppercase">Define tu Estilo</h1>
+        <h1 className="text-4xl font-black tracking-tighter mb-2 text-white uppercase">Elige qué te gusta</h1>
         <p className="text-gray-500 text-[10px] tracking-widest uppercase font-bold">
-            Usa los <span className="text-blue-500">Botones</span> o las teclas <span className="text-blue-500">WASD / Flechas</span>
+            Usa los <span className="text-blue-500">Botones</span> o las teclas <span className="text-blue-500">A/D o Flechas</span>
         </p>
       </div>
 
       <div className="relative w-full max-w-[320px] aspect-[4/5] flex items-center justify-center">
-        <AnimatePresence mode='popLayout'>
-          {items.map((item, index) => (
-            <SwipeCard 
-              key={item.id} 
-              item={item} 
-              index={index}
-              direction={lastDirection}
-            />
-          ))}
-        </AnimatePresence>
+        {isLoading ? (
+            <div className="text-white">Cargando películas populares...</div>
+        ) : (
+            <AnimatePresence mode='popLayout'>
+            {items.map((item, index) => (
+                <SwipeCard 
+                key={item.movie_id} 
+                item={item} 
+                index={index}
+                direction={lastDirection}
+                />
+            ))}
+            </AnimatePresence>
+        )}
       </div>
 
       {/* Controles Interactivos (Botones y Teclas) */}
@@ -142,7 +177,7 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
   );
 };
 
-const SwipeCard = ({ item, index, direction }: { item: Taste, index: number, direction: 'left' | 'right' | null }) => {
+const SwipeCard = ({ item, index, direction }: { item: Movie, index: number, direction: 'left' | 'right' | null }) => {
   return (
     <motion.div
       style={{ position: 'absolute', zIndex: index }}
@@ -155,7 +190,7 @@ const SwipeCard = ({ item, index, direction }: { item: Taste, index: number, dir
         transition: { duration: 0.5, ease: "circIn" } 
       }}
     >
-      <CharacterCard image={item.image} genre={item.label} />
+      <CharacterCard image={item.poster_url} genre={item.title} />
     </motion.div>
   );
 };
