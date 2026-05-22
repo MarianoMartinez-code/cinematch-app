@@ -17,5 +17,8 @@ class UserProfile(models.Model):
     # liked_movies: Guardaremos una lista de IDs de películas a las que el usuario dio "Me Gustó"
     liked_movies = models.JSONField(default=list)
 
+    # profile_image: Guardaremos la URL de la imagen de perfil del usuario
+    profile_image = models.CharField(max_length=500, default='/images/avatars/avatar_popcorn.png')
+
     def __str__(self):
         return self.email

@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  Search,
-  Bell,
-  Play,
-  Info,
-  Globe
-} from 'lucide-react';
+import { Info } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,7 +35,7 @@ const Navbar = ({ character, onProfileClick, onSwiperClick }: { character: any, 
         className="w-10 h-10 rounded-full overflow-hidden border border-white/20 hover:border-blue-500 transition-colors cursor-pointer shadow-lg"
         onClick={onProfileClick}
       >
-        <img src={character?.image || "https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp"} alt="Profile" className="w-full h-full object-cover" />
+        <img src={character?.image || "/images/avatars/avatar_popcorn.png"} alt="Profile" className="w-full h-full object-cover" />
       </div>
     </div>
   </nav>
@@ -98,7 +92,7 @@ function Dashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: 'Usuario Premium',
-    image: 'https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp'
+    image: '/images/avatars/avatar_popcorn.png'
   });
 
   // Estado para las películas de la API
@@ -119,11 +113,11 @@ function Dashboard() {
   };
 
   const AVATARS = [
-    'https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp', // Messi Pelado
-    'https://i.imgflip.com/4/33i4r0.jpg', // Red Bird
-    'https://i.pinimg.com/originals/1b/83/8a/1b838a3c8708c8f0e06093557e034e34.jpg', // Puppy
-    'https://pbs.twimg.com/media/E_9Rz_rXIAEkG6B.jpg', // Hola Tonotos
-    'https://pbs.twimg.com/media/E8N9-u7X0AAb8_v.jpg' // Gato Baboso
+    '/images/avatars/avatar_popcorn.png',
+    '/images/avatars/avatar_clapper.png',
+    '/images/avatars/avatar_film.png',
+    '/images/avatars/avatar_ticket.png',
+    '/images/avatars/avatar_camera.png'
   ];
 
   // Estado para las interacciones con las películas
@@ -167,6 +161,10 @@ function Dashboard() {
         });
         if (meRes.ok) {
           const meData = await meRes.json();
+          setUserProfile({
+            name: meData.email ? meData.email.split('@')[0] : 'Usuario Premium',
+            image: meData.profile_image || '/images/avatars/avatar_popcorn.png'
+          });
           const newInteractions: Record<number, { mylist: boolean, liked: boolean }> = {};
           meData.watchlist?.forEach((id: number) => {
             newInteractions[id] = { mylist: true, liked: false };
@@ -293,6 +291,28 @@ function Dashboard() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const updateProfileImage = async (url: string) => {
+    setUserProfile(prev => ({ ...prev, image: url }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      const response = await fetch('http://localhost:8000/api/users/update-profile/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ profile_image: url })
+      });
+      if (!response.ok) {
+        console.error("Error al actualizar la imagen de perfil en el backend");
+      }
+    } catch (e) {
+      console.error("Error de red al actualizar la imagen de perfil:", e);
     }
   };
 
@@ -442,7 +462,7 @@ function Dashboard() {
                         key={i}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => setUserProfile(prev => ({ ...prev, image: url }))}
+                        onClick={() => updateProfileImage(url)}
                         className={`w-12 h-12 rounded-xl overflow-hidden border-2 transition-all ${userProfile.image === url ? 'border-blue-500' : 'border-transparent opacity-50 hover:opacity-100'}`}
                       >
                         <img src={url} alt="Avatar option" className="w-full h-full object-cover object-center" />
