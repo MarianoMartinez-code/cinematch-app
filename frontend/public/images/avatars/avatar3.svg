@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#84cc16"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="24" fill="url(#bg)"/>
+  <!-- Face -->
+  <circle cx="100" cy="96" r="58" fill="rgba(255,255,255,0.15)"/>
+  <!-- Eyes -->
+  <circle cx="82" cy="84" r="9" fill="white"/>
+  <circle cx="118" cy="84" r="9" fill="white"/>
+  <circle cx="85" cy="87" r="4" fill="#065f46"/>
+  <circle cx="121" cy="87" r="4" fill="#065f46"/>
+  <!-- Big laugh mouth -->
+  <path d="M 72 106 Q 100 138 128 106" fill="white" stroke="white" stroke-width="3"/>
+  <!-- Tongue -->
+  <ellipse cx="100" cy="124" rx="14" ry="8" fill="#f87171"/>
+  <!-- Cheeks -->
+  <circle cx="66" cy="108" r="12" fill="rgba(255,255,255,0.28)"/>
+  <circle cx="134" cy="108" r="12" fill="rgba(255,255,255,0.28)"/>
+</svg>

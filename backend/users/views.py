@@ -65,9 +65,46 @@ def get_me(request):
             return JsonResponse({
                 "watchlist": profile.watchlist or [],
                 "genre_scores": profile.genre_scores or {},
-                "liked_movies": profile.liked_movies or []
+                "liked_movies": profile.liked_movies or [],
+                "profile_image": profile.profile_image or '/images/avatars/avatar_popcorn.png',
+                "email": profile.email
             })
         except UserProfile.DoesNotExist:
-            return JsonResponse({"watchlist": [], "genre_scores": {}, "liked_movies": []})
+            return JsonResponse({
+                "watchlist": [],
+                "genre_scores": {},
+                "liked_movies": [],
+                "profile_image": '/images/avatars/avatar_popcorn.png',
+                "email": ""
+            })
             
+    return JsonResponse({"error": "Método no permitido"}, status=405)
+
+@csrf_exempt
+def update_profile(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        profile_image = data.get('profile_image')
+        user_id = getattr(request, 'user_id', None)
+        user_email = getattr(request, 'user_email', '')
+        
+        if not user_id:
+            return JsonResponse({"error": "No autorizado"}, status=401)
+            
+        profile, created = UserProfile.objects.get_or_create(id=user_id, defaults={'email': user_email})
+        
+        if profile_image:
+            profile.profile_image = profile_image
+            
+        # Si el correo se actualizó o cambió
+        if profile.email == '' and user_email:
+            profile.email = user_email
+            
+        profile.save()
+        return JsonResponse({
+            "status": "success", 
+            "profile_image": profile.profile_image,
+            "email": profile.email
+        })
+        
     return JsonResponse({"error": "Método no permitido"}, status=405)

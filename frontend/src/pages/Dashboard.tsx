@@ -44,7 +44,7 @@ const Navbar = ({ character, onProfileClick, onSwiperClick }: { character: any, 
         className="w-10 h-10 rounded-full overflow-hidden border border-white/20 hover:border-blue-500 transition-colors cursor-pointer shadow-lg"
         onClick={onProfileClick}
       >
-        <img src={character?.image || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Cpath d='M 25 60 Q 50 85 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Ccircle cx='70' cy='40' r='8' fill='white'/%3E%3C/svg%3E"} alt="Profile" className="w-full h-full object-cover" />
+        <img src={character?.image || "https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp"} alt="Profile" className="w-full h-full object-cover" />
       </div>
     </div>
   </nav>
@@ -180,7 +180,7 @@ function Dashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: 'Usuario Premium',
-    image: localStorage.getItem('userAvatar') || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Cpath d='M 25 60 Q 50 85 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Ccircle cx='70' cy='40' r='8' fill='white'/%3E%3C/svg%3E"
+    image: localStorage.getItem('userAvatar') || '/images/avatars/avatar1.svg'
   });
 
   // Estado para las películas de la API
@@ -201,11 +201,11 @@ function Dashboard() {
   };
 
   const AVATARS = [
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Cpath d='M 25 60 Q 50 85 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Ccircle cx='70' cy='40' r='8' fill='white'/%3E%3C/svg%3E",
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ef4444'/%3E%3Cpath d='M 30 65 L 70 65' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3Crect x='20' y='35' width='25' height='15' rx='3' fill='none' stroke='white' stroke-width='6'/%3E%3Crect x='55' y='35' width='25' height='15' rx='3' fill='none' stroke='white' stroke-width='6'/%3E%3Cpath d='M 45 42 L 55 42' fill='none' stroke='white' stroke-width='6'/%3E%3C/svg%3E",
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2310b981'/%3E%3Cpath d='M 25 60 Q 50 80 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Cpath d='M 60 40 L 80 40' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E",
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f59e0b'/%3E%3Ccircle cx='50' cy='65' r='10' fill='none' stroke='white' stroke-width='6'/%3E%3Ccircle cx='30' cy='35' r='6' fill='white'/%3E%3Ccircle cx='70' cy='35' r='6' fill='white'/%3E%3Cpath d='M 25 25 Q 30 20 35 25 M 65 25 Q 70 20 75 25' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E",
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%238b5cf6'/%3E%3Cpath d='M 35 70 Q 50 65 65 70' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M 20 45 Q 30 35 40 45' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M 60 45 Q 70 35 80 45' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E"
+    '/images/avatars/avatar1.svg', // 😊 Azul feliz
+    '/images/avatars/avatar2.svg', // 😎 Rojo con gafas
+    '/images/avatars/avatar3.svg', // 😂 Verde carcajada
+    '/images/avatars/avatar4.svg', // 😉 Amarillo guiño
+    '/images/avatars/avatar5.svg', // 🤩 Morado ojos de estrella
   ];
 
   // Estado para las interacciones con las películas
@@ -249,6 +249,10 @@ function Dashboard() {
         });
         if (meRes.ok) {
           const meData = await meRes.json();
+          setUserProfile({
+            name: meData.email ? meData.email.split('@')[0] : 'Usuario Premium',
+            image: meData.profile_image || '/images/avatars/avatar_popcorn.png'
+          });
           const newInteractions: Record<number, { mylist: boolean, liked: boolean }> = {};
           meData.watchlist?.forEach((id: number) => {
             newInteractions[id] = { mylist: true, liked: false };
@@ -375,6 +379,28 @@ function Dashboard() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const updateProfileImage = async (url: string) => {
+    setUserProfile(prev => ({ ...prev, image: url }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      const response = await fetch('http://localhost:8000/api/users/update-profile/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ profile_image: url })
+      });
+      if (!response.ok) {
+        console.error("Error al actualizar la imagen de perfil en el backend");
+      }
+    } catch (e) {
+      console.error("Error de red al actualizar la imagen de perfil:", e);
     }
   };
 
@@ -524,10 +550,7 @@ function Dashboard() {
                         key={i}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => {
-                          setUserProfile(prev => ({ ...prev, image: url }));
-                          localStorage.setItem('userAvatar', url);
-                        }}
+                        onClick={() => setUserProfile(prev => ({ ...prev, image: url }))}
                         className={`w-12 h-12 rounded-xl overflow-hidden border-2 transition-all ${userProfile.image === url ? 'border-blue-500' : 'border-transparent opacity-50 hover:opacity-100'}`}
                       >
                         <img src={url} alt="Avatar option" className="w-full h-full object-cover object-center" />
