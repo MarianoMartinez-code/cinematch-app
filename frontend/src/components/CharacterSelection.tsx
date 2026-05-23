@@ -28,7 +28,8 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
     const fetchOnboardingMovies = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch('http://localhost:8000/api/movies/onboarding/', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/movies/onboarding/`, {
            headers: { 'Authorization': `Bearer ${session?.access_token}` }
         });
         if (res.ok) {
@@ -103,7 +104,8 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
             try {
-              await fetch('http://localhost:8000/api/users/init-profile/', {
+              const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+              await fetch(`${apiUrl}/api/users/init-profile/`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -130,14 +132,22 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
     <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-8 overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none" />
       
-      <div className="relative z-10 text-center mb-12">
+      {/* Botón de Salida */}
+      <button 
+        onClick={() => navigate('/home')}
+        className="absolute top-8 right-8 w-12 h-12 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full flex items-center justify-center text-white transition-all z-50 group"
+      >
+        <span className="text-2xl group-hover:scale-110 transition-transform">✕</span>
+      </button>
+      
+      <div className="relative z-10 text-center mb-6">
         <h1 className="text-4xl font-black tracking-tighter mb-2 text-white uppercase">Elige qué te gusta</h1>
         <p className="text-gray-500 text-[10px] tracking-widest uppercase font-bold">
             Usa los <span className="text-blue-500">Botones</span> o las teclas <span className="text-blue-500">A/D o Flechas</span>
         </p>
       </div>
 
-      <div className="relative w-full max-w-[320px] aspect-[4/5] flex items-center justify-center">
+      <div className="relative w-full max-w-[380px] aspect-[2/3] flex items-center justify-center">
         {isLoading ? (
             <div className="text-white">Cargando películas populares...</div>
         ) : (
@@ -155,7 +165,7 @@ const CharacterSelection: React.FC<OnboardingProps> = ({ onComplete }) => {
       </div>
 
       {/* Controles Interactivos (Botones y Teclas) */}
-      <div className="mt-16 flex gap-12 z-10">
+      <div className="mt-8 flex gap-12 z-10">
         <div className="flex flex-col items-center gap-3">
             <motion.button
                 whileHover={{ scale: 1.1 }}

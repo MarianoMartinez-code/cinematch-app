@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Search,
   Bell,
   Play,
   Info,
-  Globe
+  Globe,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +26,7 @@ interface Movie {
 
 // --- Simplified Movie Data ---
 // Ahora se cargan desde la API
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // --- Components ---
 
@@ -41,7 +44,7 @@ const Navbar = ({ character, onProfileClick, onSwiperClick }: { character: any, 
         className="w-10 h-10 rounded-full overflow-hidden border border-white/20 hover:border-blue-500 transition-colors cursor-pointer shadow-lg"
         onClick={onProfileClick}
       >
-        <img src={character?.image || "https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp"} alt="Profile" className="w-full h-full object-cover" />
+        <img src={character?.image || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Cpath d='M 25 60 Q 50 85 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Ccircle cx='70' cy='40' r='8' fill='white'/%3E%3C/svg%3E"} alt="Profile" className="w-full h-full object-cover" />
       </div>
     </div>
   </nav>
@@ -51,7 +54,7 @@ const MovieCard = ({ title, genre, year, img, tick, onClick }: Movie & { tick: n
   <motion.div
     whileHover={{ scale: 1.05 }}
     onClick={onClick}
-    className="flex-shrink-0 w-64 group cursor-pointer"
+    className="flex-shrink-0 w-80 group cursor-pointer"
   >
     <div className="relative aspect-[2/3] rounded-xl overflow-hidden mb-3 border border-white/10 group-hover:border-blue-500/50 transition-colors">
       <img src={`${img}&v=${tick}`} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -68,27 +71,106 @@ const MovieCard = ({ title, genre, year, img, tick, onClick }: Movie & { tick: n
   </motion.div>
 );
 
-const MovieRow = ({ title, movies, tick, onMovieClick }: { title: string, movies: Movie[], tick: number, onMovieClick: (movie: Movie) => void }) => (
-  <section className="px-12 py-8">
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-xl font-bold">{title}</h2>
-        <span className="px-2 py-0.5 bg-blue-600 text-[10px] font-bold rounded uppercase tracking-wider">Hoy</span>
+const MovieRow = ({ title, movies, tick, onMovieClick }: { title: string, movies: Movie[], tick: number, onMovieClick: (movie: Movie) => void }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth * 0.8 : scrollLeft + clientWidth * 0.8;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <section className="px-12 py-8 group/row relative">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold">{title}</h2>
+          <span className="px-2 py-0.5 bg-blue-600 text-[10px] font-bold rounded uppercase tracking-wider">Hoy</span>
+        </div>
+        <button className="text-xs text-gray-500 hover:text-white transition-colors">Ver todo</button>
       </div>
-      <button className="text-xs text-gray-500 hover:text-white transition-colors">Ver todo</button>
+      <div className="relative">
+        {/* Left Arrow */}
+        <button 
+          onClick={() => scroll('left')} 
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all border border-white/10 -ml-6"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        {/* Right Arrow */}
+        <button 
+          onClick={() => scroll('right')} 
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all border border-white/10 -mr-6"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        <div ref={scrollRef} className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+          {movies.map((movie) => (
+            <MovieCard 
+              key={movie.id} 
+              {...movie} 
+              tick={tick} 
+              onClick={() => onMovieClick(movie)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ProfileMovieRow = ({ title, movies, tick, colorClass, emptyMessage, onMovieClick }: { title: string, movies: Movie[], tick: number, colorClass: string, emptyMessage: string, onMovieClick: (movie: Movie) => void }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth * 0.8 : scrollLeft + clientWidth * 0.8;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="group/row relative">
+      <div className="flex items-center gap-3 mb-8">
+        <div className={`w-2 h-8 ${colorClass} rounded-full`} />
+        <h3 className="text-2xl font-black tracking-tight">{title}</h3>
+      </div>
+      {movies.length > 0 ? (
+        <div className="relative">
+          <button 
+            onClick={() => scroll('left')} 
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all border border-white/10 -ml-6"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={() => scroll('right')} 
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all border border-white/10 -mr-6"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+          <div ref={scrollRef} className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+            {movies.map(movie => (
+              <MovieCard 
+                key={movie.id} 
+                {...movie} 
+                tick={tick} 
+                onClick={() => onMovieClick(movie)} 
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-gray-600 italic">{emptyMessage}</p>
+      )}
     </div>
-    <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
-      {movies.map((movie) => (
-        <MovieCard 
-          key={movie.id} 
-          {...movie} 
-          tick={tick} 
-          onClick={() => onMovieClick(movie)}
-        />
-      ))}
-    </div>
-  </section>
-);
+  );
+};
 
 
 function Dashboard() {
@@ -98,7 +180,7 @@ function Dashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: 'Usuario Premium',
-    image: 'https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp'
+    image: localStorage.getItem('userAvatar') || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Cpath d='M 25 60 Q 50 85 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Ccircle cx='70' cy='40' r='8' fill='white'/%3E%3C/svg%3E"
   });
 
   // Estado para las películas de la API
@@ -119,11 +201,11 @@ function Dashboard() {
   };
 
   const AVATARS = [
-    'https://images.7tv.app/01GK9P0Z5G00085G5Z1YV7C0Y8/2x.webp', // Messi Pelado
-    'https://i.imgflip.com/4/33i4r0.jpg', // Red Bird
-    'https://i.pinimg.com/originals/1b/83/8a/1b838a3c8708c8f0e06093557e034e34.jpg', // Puppy
-    'https://pbs.twimg.com/media/E_9Rz_rXIAEkG6B.jpg', // Hola Tonotos
-    'https://pbs.twimg.com/media/E8N9-u7X0AAb8_v.jpg' // Gato Baboso
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Cpath d='M 25 60 Q 50 85 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Ccircle cx='70' cy='40' r='8' fill='white'/%3E%3C/svg%3E",
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ef4444'/%3E%3Cpath d='M 30 65 L 70 65' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3Crect x='20' y='35' width='25' height='15' rx='3' fill='none' stroke='white' stroke-width='6'/%3E%3Crect x='55' y='35' width='25' height='15' rx='3' fill='none' stroke='white' stroke-width='6'/%3E%3Cpath d='M 45 42 L 55 42' fill='none' stroke='white' stroke-width='6'/%3E%3C/svg%3E",
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2310b981'/%3E%3Cpath d='M 25 60 Q 50 80 75 60' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='40' r='8' fill='white'/%3E%3Cpath d='M 60 40 L 80 40' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E",
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f59e0b'/%3E%3Ccircle cx='50' cy='65' r='10' fill='none' stroke='white' stroke-width='6'/%3E%3Ccircle cx='30' cy='35' r='6' fill='white'/%3E%3Ccircle cx='70' cy='35' r='6' fill='white'/%3E%3Cpath d='M 25 25 Q 30 20 35 25 M 65 25 Q 70 20 75 25' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E",
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%238b5cf6'/%3E%3Cpath d='M 35 70 Q 50 65 65 70' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M 20 45 Q 30 35 40 45' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M 60 45 Q 70 35 80 45' fill='none' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E"
   ];
 
   // Estado para las interacciones con las películas
@@ -162,7 +244,7 @@ function Dashboard() {
 
       // Obtenemos el perfil para recuperar la lista de películas guardadas
       try {
-        const meRes = await fetch('http://localhost:8000/api/users/me/', {
+        const meRes = await fetch(`${API_URL}/api/users/me/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (meRes.ok) {
@@ -184,7 +266,7 @@ function Dashboard() {
           const watchlistIds = meData.watchlist || [];
           
           if (likedIds.length > 0) {
-              const res = await fetch(`http://localhost:8000/api/movies/details/?ids=${likedIds.join(',')}`, { headers: { 'Authorization': `Bearer ${token}` } });
+              const res = await fetch(`${API_URL}/api/movies/details/?ids=${likedIds.join(',')}`, { headers: { 'Authorization': `Bearer ${token}` } });
               if (res.ok) {
                   const details = await res.json();
                   const likedMapped = details.results.map(mapMovie);
@@ -192,7 +274,7 @@ function Dashboard() {
               }
           }
           if (watchlistIds.length > 0) {
-              const res = await fetch(`http://localhost:8000/api/movies/details/?ids=${watchlistIds.join(',')}`, { headers: { 'Authorization': `Bearer ${token}` } });
+              const res = await fetch(`${API_URL}/api/movies/details/?ids=${watchlistIds.join(',')}`, { headers: { 'Authorization': `Bearer ${token}` } });
               if (res.ok) {
                   const details = await res.json();
                   setProfileWatchlistMovies(details.results.map(mapMovie));
@@ -201,7 +283,7 @@ function Dashboard() {
         }
       } catch (e) { console.error(e); }
 
-      const response = await fetch('http://localhost:8000/api/movies/next/', {
+      const response = await fetch(`${API_URL}/api/movies/next/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -262,7 +344,7 @@ function Dashboard() {
         } else {
            setProfileLikedMovies(prev => prev.filter(m => m.id !== movieId));
         }
-        await fetch('http://localhost:8000/api/movies/swipe/', {
+        await fetch(`${API_URL}/api/movies/swipe/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -280,7 +362,7 @@ function Dashboard() {
         } else {
            setProfileWatchlistMovies(prev => prev.filter(m => m.id !== movieId));
         }
-        await fetch('http://localhost:8000/api/users/watchlist/', {
+        await fetch(`${API_URL}/api/users/watchlist/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -442,7 +524,10 @@ function Dashboard() {
                         key={i}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => setUserProfile(prev => ({ ...prev, image: url }))}
+                        onClick={() => {
+                          setUserProfile(prev => ({ ...prev, image: url }));
+                          localStorage.setItem('userAvatar', url);
+                        }}
                         className={`w-12 h-12 rounded-xl overflow-hidden border-2 transition-all ${userProfile.image === url ? 'border-blue-500' : 'border-transparent opacity-50 hover:opacity-100'}`}
                       >
                         <img src={url} alt="Avatar option" className="w-full h-full object-cover object-center" />
@@ -467,51 +552,24 @@ function Dashboard() {
 
                   <div className="space-y-16">
                     {/* Fila Me Gustó */}
-                    <div>
-                      <div className="flex items-center gap-3 mb-8">
-                        <div className="w-2 h-8 bg-green-500 rounded-full" />
-                        <h3 className="text-2xl font-black tracking-tight">PELÍCULAS QUE ME GUSTARON</h3>
-                      </div>
-                      {profileLikedMovies.length > 0 ? (
-                        <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
-                          {profileLikedMovies.map(movie => (
-                            <MovieCard 
-                              key={movie.id} 
-                              {...movie} 
-                              tick={tick} 
-                              onClick={() => {
-                                setSelectedMovie(movie);
-                                // No cerramos el perfil para que pueda volver
-                              }} 
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-600 italic">Aún no has marcado ninguna película con "Me Gustó".</p>
-                      )}
-                    </div>
+                    <ProfileMovieRow 
+                      title="PELÍCULAS QUE ME GUSTARON"
+                      movies={profileLikedMovies}
+                      tick={tick}
+                      colorClass="bg-green-500"
+                      emptyMessage='Aún no has marcado ninguna película con "Me Gustó".'
+                      onMovieClick={setSelectedMovie}
+                    />
 
                     {/* Fila Mi Lista */}
-                    <div>
-                      <div className="flex items-center gap-3 mb-8">
-                        <div className="w-2 h-8 bg-blue-500 rounded-full" />
-                        <h3 className="text-2xl font-black tracking-tight">EN MI LISTA</h3>
-                      </div>
-                      {profileWatchlistMovies.length > 0 ? (
-                        <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
-                          {profileWatchlistMovies.map(movie => (
-                            <MovieCard 
-                              key={movie.id} 
-                              {...movie} 
-                              tick={tick} 
-                              onClick={() => setSelectedMovie(movie)} 
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-600 italic">Tu lista está vacía actualmente.</p>
-                      )}
-                    </div>
+                    <ProfileMovieRow 
+                      title="EN MI LISTA"
+                      movies={profileWatchlistMovies}
+                      tick={tick}
+                      colorClass="bg-blue-500"
+                      emptyMessage="Tu lista está vacía actualmente."
+                      onMovieClick={setSelectedMovie}
+                    />
                   </div>
                 </div>
               </div>
